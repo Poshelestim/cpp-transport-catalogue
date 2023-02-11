@@ -1,1 +1,125 @@
-// место для вашего кода
+#pragma once
+#include <cmath>
+
+#include <deque>
+#include <set>
+#include <unordered_map>
+
+#include "input_reader.h"
+
+class TransportCatalogue
+{
+public:
+
+    struct Bus
+    {
+        Bus() = delete;
+
+        Bus(std::string_view _query);
+
+        ~Bus();
+
+        Bus(const Bus &other);
+
+        Bus(Bus &&other) noexcept;
+
+        Bus operator=(const Bus &other);
+
+        bool operator==(const Bus &other) const;
+
+        std::string_view name_;
+        std::vector<std::string_view> route_;
+        bool is_circul_ = false;
+        size_t number_unique_stops_ = 0;
+        long double route_length_ = 0.0;
+        double curvature_ = 0.0;
+    };
+
+    struct Stop
+    {
+        Stop() = delete;
+
+        Stop(std::string_view _query);
+
+        Stop(std::string_view _name,
+             std::string_view _latitude,
+             std::string_view _longitude);
+
+        ~Stop();
+
+        Stop(const Stop &other);
+
+        Stop(Stop &&other) noexcept;
+
+        Stop operator=(const Stop &other);
+
+        bool operator==(const Stop &other) const;
+
+        std::string_view name_;
+        double latitude_;
+        double longitude_;
+    };
+
+    struct Hasher
+    {
+        size_t operator()(const std::pair<std::string_view, std::string_view> &_key) const;
+
+        size_t operator()(std::pair<Stop *, Stop *> _key) const;
+
+        size_t operator()(const Stop *_key) const;
+
+        size_t operator()(const Bus *_key) const;
+
+    };
+
+    struct BusInfo
+    {
+        BusInfo() = default;
+
+        std::string_view name_ = "";
+        size_t number_stops_ = 0;
+        size_t number_unique_stops_ = 0;
+        double route_length_ = 0.0;
+        double curvature_ = 0.0;
+        bool is_circul_ = false;
+    };
+
+    struct StopInfo
+    {
+        StopInfo() = default;
+
+        std::string_view name_ = "";
+        std::set<std::string_view> buses_;
+        bool is_exist = false;
+    };
+
+    TransportCatalogue() = default;
+
+    ~TransportCatalogue() = default;
+
+    TransportCatalogue(const TransportCatalogue &other) = delete;
+
+    void addStop(std::string_view _query);
+
+    Stop* findStop(std::string_view _name);
+
+    void addBus(std::string_view _query);
+
+    Bus* findBus(std::string_view _name);
+
+    BusInfo getBusInfo(std::string_view _name);
+
+    StopInfo getStopInfo(std::string_view _name);
+
+private:
+
+    std::deque<Stop> stops_;
+    std::unordered_map<std::string_view, Stop *> stopname_to_stops_;
+
+    std::deque<Bus> buses_;
+    std::unordered_map<std::string_view, Bus *> busname_to_buses_;
+
+    std::unordered_map<std::pair<std::string_view, std::string_view>, double, Hasher> distances_between_stops_;
+
+    std::unordered_map<std::string_view, std::set<std::string_view>> stop_to_buses_;
+};
