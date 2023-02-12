@@ -6,55 +6,12 @@
 
 #include "libs/geo.h"
 
-TransportCatalogue::Bus::Bus(std::string_view _query)
-{
-    uint64_t colon = _query.rfind(':');
-    if (colon != std::string_view::npos)
-    {
-        name_ = _query.substr(0, colon);
-        name_.remove_prefix(1);
-        _query.remove_prefix(colon + 1);
-        char sep = '>';
-
-        if (_query.find('-') != std::string_view::npos)
-        {
-            is_circul_ = true;
-            sep = '-';
-        }
-
-        uint64_t sep_pos = _query.find_first_of(sep);
-        while (!_query.empty())
-        {
-            std::string_view namestop;
-            if (sep_pos != std::string_view::npos)
-            {
-                namestop = _query.substr(_query.find_first_not_of(' '), sep_pos - 1);
-                if (namestop[namestop.size() - 1] == ' ')
-                {
-                    namestop.remove_suffix(1);
-                }
-                route_.emplace_back(namestop);
-                _query = _query.substr(_query.find_first_of(sep) + 1);
-                sep_pos = _query.find_first_of(sep);
-                continue;
-            }
-            namestop = _query.substr(_query.find_first_not_of(' '));
-            if (namestop[namestop.size() - 1] == ' ')
-            {
-                namestop.remove_suffix(1);
-            }
-            route_.emplace_back(namestop);
-            _query = "";
-        }
-    }
-}
-
-TransportCatalogue::Bus::~Bus()
+Bus::~Bus()
 {
     this->route_.clear();
 }
 
-TransportCatalogue::Bus::Bus(const Bus &other)
+Bus::Bus(const Bus &other)
 {
     this->name_ = other.name_;
     this->route_ = other.route_;
@@ -65,7 +22,7 @@ TransportCatalogue::Bus::Bus(const Bus &other)
     this->curvature_ = other.curvature_;
 }
 
-TransportCatalogue::Bus::Bus(Bus &&other) noexcept
+Bus::Bus(Bus &&other) noexcept
 {
     std::swap(this->name_, other.name_);
     std::swap(this->route_, other.route_);
@@ -75,7 +32,7 @@ TransportCatalogue::Bus::Bus(Bus &&other) noexcept
     std::swap(this->number_unique_stops_, other.number_unique_stops_);
 }
 
-TransportCatalogue::Bus TransportCatalogue::Bus::operator=(const Bus &other)
+Bus Bus::operator=(const Bus &other)
 {
     this->route_length_ = other.route_length_;
     this->name_ = other.name_;
@@ -85,7 +42,7 @@ TransportCatalogue::Bus TransportCatalogue::Bus::operator=(const Bus &other)
     return *this;
 }
 
-bool TransportCatalogue::Bus::operator==(const Bus &other) const
+bool Bus::operator==(const Bus &other) const
 {
     const double EPSILON = 1.0;
     return std::abs(this->route_length_ - other.route_length_) < EPSILON &&
@@ -95,29 +52,7 @@ bool TransportCatalogue::Bus::operator==(const Bus &other) const
             this->number_unique_stops_ == other.number_unique_stops_;
 }
 
-TransportCatalogue::Stop::Stop(std::string_view _query)
-{
-    uint64_t colon = _query.rfind(':');
-    if (colon != std::string_view::npos)
-    {
-        name_ = _query.substr(0, colon);
-        name_.remove_prefix(1);
-        _query.remove_prefix(colon + 1);
-        _query = _query.substr(_query.find_first_not_of(' '));
-        colon = _query.find(',');
-        if (colon != std::string_view::npos)
-        {
-            std::string_view latitude = _query.substr(0, colon);
-            latitude_ = std::stod({latitude.data(), latitude.size()});
-        }
-        _query = _query.substr(_query.find(','));
-        _query.remove_prefix(1);
-        std::string_view longitude = _query.substr(_query.find_first_not_of(' '));
-        longitude_ = std::stod({longitude.data(), longitude.size()});
-    }
-}
-
-TransportCatalogue::Stop::Stop(std::string_view _name,
+Stop::Stop(std::string_view _name,
                                std::string_view _latitude,
                                std::string_view _longitude) :
     name_(_name),
@@ -127,12 +62,12 @@ TransportCatalogue::Stop::Stop(std::string_view _name,
 
 }
 
-TransportCatalogue::Stop::~Stop()
+Stop::~Stop()
 {
 
 }
 
-TransportCatalogue::Stop::Stop(const Stop &other) :
+Stop::Stop(const Stop &other) :
     name_(other.name_),
     latitude_(other.latitude_),
     longitude_(other.longitude_)
@@ -140,17 +75,14 @@ TransportCatalogue::Stop::Stop(const Stop &other) :
 
 }
 
-TransportCatalogue::Stop::Stop(Stop &&other) noexcept
+Stop::Stop(Stop &&other) noexcept
 {
-    this->name_.swap(other.name_);
-    this->latitude_ = other.latitude_;
-    this->longitude_ = other.longitude_;
-
-    other.latitude_ = 0.0;
-    other.longitude_ = 0.0;
+    std::swap(this->name_, other.name_);
+    std::swap(this->latitude_, other.latitude_);
+    std::swap(this->longitude_, other.longitude_);
 }
 
-TransportCatalogue::Stop TransportCatalogue::Stop::operator=(const Stop &other)
+Stop Stop::operator=(const Stop &other)
 {
     this->name_ = other.name_;
     this->latitude_ = other.latitude_;
@@ -158,7 +90,7 @@ TransportCatalogue::Stop TransportCatalogue::Stop::operator=(const Stop &other)
     return *this;
 }
 
-bool TransportCatalogue::Stop::operator==(const Stop &other) const
+bool Stop::operator==(const Stop &other) const
 {
     const double EPSILON = 1;
     return std::abs(this->latitude_ - other.latitude_) < EPSILON &&
@@ -208,45 +140,24 @@ size_t TransportCatalogue::Hasher::operator()(const std::pair<std::string_view, 
     std::hash<std::string_view>{}(_key.second);
 }
 
-void TransportCatalogue::addStop(std::string_view _query)
+void TransportCatalogue::addStop(Stop &&_new_stop,
+             const std::vector<std::pair<std::string_view, double> > &distances_to_stops) noexcept
 {
-    std::string_view _query_for_stop = _query;
-    uint64_t comma = _query_for_stop.rfind(',');
-    bool has_stops = comma != _query_for_stop.find(',');
-    if (has_stops)
-    {
-        _query_for_stop = _query_for_stop.substr(0, comma);
-    }
-    Stop new_stop(_query_for_stop);
-    stops_.emplace_back(std::move(new_stop));
+    stops_.emplace_back(std::move(_new_stop));
     Stop *ptr_stop = &stops_[stops_.size() - 1];
     stopname_to_stops_[ptr_stop->name_] = ptr_stop;
     stop_to_buses_.insert({ptr_stop->name_, std::set<std::string_view>{}});
 
-    if (has_stops)
+    if (!distances_to_stops.empty())
     {
-        _query = _query.substr(_query.find(',') + 1);
-        _query = _query.substr(_query.find(',') + 1);
-        while (!_query.empty())
+        for (auto const &[namestop, distance] : distances_to_stops)
         {
-            std::string_view distance = _query.substr(1, _query.find('m') - 1);
-            std::string_view namestop = _query.substr(_query.find("to") + 3);
-            namestop = namestop.substr(0, namestop.find_first_of(','));
-            this->distances_between_stops_[{ptr_stop->name_, namestop}] =
-                    std::stol(distance.data());
-            comma = _query.find(',');
-            if (comma != std::string_view::npos)
-            {
-                _query = _query.substr(comma + 1);
-                continue;
-            }
-            _query = "";
+            this->distances_between_stops_[{ptr_stop->name_, namestop}] = distance;
         }
     }
 }
 
-
-TransportCatalogue::Stop *TransportCatalogue::findStop(std::string_view _name)
+Stop *TransportCatalogue::findStop(std::string_view _name)
 {
     if (stopname_to_stops_.find(_name) != stopname_to_stops_.end())
     {
@@ -255,9 +166,9 @@ TransportCatalogue::Stop *TransportCatalogue::findStop(std::string_view _name)
     return nullptr;
 }
 
-void TransportCatalogue::addBus(std::string_view _query)
+void TransportCatalogue::addBus(Bus &&_new_bus) noexcept
 {
-    Bus bus(_query);
+    Bus bus(std::move(_new_bus));
     std::pair<std::string_view, std::string_view> pair_stops;
     double geo_distance = 0.0;
     for (size_t index = 0; index < bus.route_.size() - 1; ++index)
@@ -268,7 +179,7 @@ void TransportCatalogue::addBus(std::string_view _query)
 
         geo_distance +=
                 geo::ComputeDistance({stop->latitude_, stop->longitude_},
-                                {next->latitude_, next->longitude_});
+                                     {next->latitude_, next->longitude_});
 
         double distance = distances_between_stops_[pair_stops];
         if (distance == 0.0)
@@ -291,8 +202,8 @@ void TransportCatalogue::addBus(std::string_view _query)
             pair_stops = {stop->name_, next->name_};
 
             geo_distance +=
-                     geo::ComputeDistance({stop->latitude_, stop->longitude_},
-                                    {next->latitude_, next->longitude_});
+                    geo::ComputeDistance({stop->latitude_, stop->longitude_},
+                                         {next->latitude_, next->longitude_});
 
             double distance = distances_between_stops_[pair_stops];
             if (distance == 0.0)
@@ -313,7 +224,7 @@ void TransportCatalogue::addBus(std::string_view _query)
     busname_to_buses_[ptr_bus->name_] = ptr_bus;
 }
 
-TransportCatalogue::Bus *TransportCatalogue::findBus(std::string_view _name)
+Bus *TransportCatalogue::findBus(std::string_view _name)
 {
     if (busname_to_buses_.find(_name) != busname_to_buses_.end())
     {

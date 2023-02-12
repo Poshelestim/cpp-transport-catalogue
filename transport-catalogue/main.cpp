@@ -46,17 +46,15 @@ int main()
 
             if (query.substr(pos, space - pos) == "Stop")
             {
-                std::string_view query_view = query;
-                query_view.remove_prefix(space);
-                catalogue.addStop(query_view);
+                auto [new_stop, distances] = parser::parseStop(query);
+                catalogue.addStop(std::move(new_stop), distances);
                 continue;
             }
 
             if (query.substr(pos, space - pos) == "Bus")
             {
-                std::string_view query_view = query;
-                query_view.remove_prefix(space);
-                catalogue.addBus(query_view);
+                Bus new_bus = parser::parseBus(query);
+                catalogue.addBus(std::move(new_bus));
                 continue;
             }
         }

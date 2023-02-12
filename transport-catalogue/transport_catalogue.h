@@ -7,58 +7,54 @@
 
 #include "input_reader.h"
 
+struct Bus
+{
+    Bus() = default;
+
+    ~Bus();
+
+    Bus(const Bus &other);
+
+    Bus(Bus &&other) noexcept;
+
+    Bus operator=(const Bus &other);
+
+    bool operator==(const Bus &other) const;
+
+    std::string_view name_;
+    std::vector<std::string_view> route_;
+    bool is_circul_ = false;
+    size_t number_unique_stops_ = 0;
+    long double route_length_ = 0.0;
+    double curvature_ = 0.0;
+};
+
+struct Stop
+{
+    Stop() = default;
+
+    Stop(std::string_view _name,
+         std::string_view _latitude,
+         std::string_view _longitude);
+
+    ~Stop();
+
+    Stop(const Stop &other);
+
+    Stop(Stop &&other) noexcept;
+
+    Stop operator=(const Stop &other);
+
+    bool operator==(const Stop &other) const;
+
+    std::string_view name_;
+    double latitude_;
+    double longitude_;
+};
+
 class TransportCatalogue
 {
 public:
-
-    struct Bus
-    {
-        Bus() = delete;
-
-        Bus(std::string_view _query);
-
-        ~Bus();
-
-        Bus(const Bus &other);
-
-        Bus(Bus &&other) noexcept;
-
-        Bus operator=(const Bus &other);
-
-        bool operator==(const Bus &other) const;
-
-        std::string_view name_;
-        std::vector<std::string_view> route_;
-        bool is_circul_ = false;
-        size_t number_unique_stops_ = 0;
-        long double route_length_ = 0.0;
-        double curvature_ = 0.0;
-    };
-
-    struct Stop
-    {
-        Stop() = delete;
-
-        Stop(std::string_view _query);
-
-        Stop(std::string_view _name,
-             std::string_view _latitude,
-             std::string_view _longitude);
-
-        ~Stop();
-
-        Stop(const Stop &other);
-
-        Stop(Stop &&other) noexcept;
-
-        Stop operator=(const Stop &other);
-
-        bool operator==(const Stop &other) const;
-
-        std::string_view name_;
-        double latitude_;
-        double longitude_;
-    };
 
     struct Hasher
     {
@@ -99,11 +95,12 @@ public:
 
     TransportCatalogue(const TransportCatalogue &other) = delete;
 
-    void addStop(std::string_view _query);
+    void addStop(Stop &&_new_stop,
+                 const std::vector<std::pair<std::string_view, double> > &distances_to_stops) noexcept;
 
     Stop* findStop(std::string_view _name);
 
-    void addBus(std::string_view _query);
+    void addBus(Bus &&_new_bus) noexcept;
 
     Bus* findBus(std::string_view _name);
 
