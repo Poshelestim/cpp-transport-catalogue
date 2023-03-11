@@ -11,7 +11,15 @@ namespace reader
 inline const std::string offset(4, ' ');
 inline const std::string double_offset(8, ' ');
 
-json::Document readJson(std::istream &_input)
+
+JsonReader::JsonReader(TransportCatalogue &_catalogue, renderer::MapRenderer &map_renderer) :
+    catalogue_(_catalogue),
+    render_(map_renderer)
+{
+
+}
+
+json::Document JsonReader::readJson(std::istream &_input)
 {
     return json::Load(_input);
 }
@@ -46,8 +54,7 @@ std::pair<domain::Stop, Distances> parseStop(const json::Dict &_data)
     return {std::move(new_stop), distances};
 }
 
-void parseBaseRequests(const json::Document &_doc,
-                       TransportCatalogue &_catalogue)
+void JsonReader::parseBaseRequests(const json::Document &_doc)
 {
     if (!_doc.GetRoot().IsMap())
     {
@@ -64,8 +71,8 @@ void parseBaseRequests(const json::Document &_doc,
     {
         if (query.AsMap().at("type").AsString() == "Stop")
         {
-            auto [new_stop, distances] = reader::parseStop(query.AsMap());
-            _catalogue.addStop(std::move(new_stop), distances);
+            auto [new_stop, distances] = parseStop(query.AsMap());
+            catalogue_.addStop(std::move(new_stop), distances);
         }
     }
 
@@ -73,13 +80,13 @@ void parseBaseRequests(const json::Document &_doc,
     {
         if (query.AsMap().at("type").AsString() == "Bus")
         {
-            auto new_bus = reader::parseBus(query.AsMap());
-            _catalogue.addBus(std::move(new_bus));
+            auto new_bus = parseBus(query.AsMap());
+            catalogue_.addBus(std::move(new_bus));
         }
     }
 }
 
-std::vector<TypeRequest> parseRequests(const json::Document &_doc)
+std::vector<TypeRequest> JsonReader::parseRequests(const json::Document &_doc)
 {
     if (!_doc.GetRoot().IsMap())
     {
@@ -125,23 +132,23 @@ std::vector<TypeRequest> parseRequests(const json::Document &_doc)
     return queries;
 }
 
-void writeStopStat(const domain::StopStat &_stat, uint32_t _id, std::ostream &_output)
+void JsonReader::writeStopStat(const domain::StopStat &_statisics, uint32_t _id, std::ostream &_output)
 {
     using namespace std::literals::string_literals;
 
     _output << offset << "{" << std::endl;
 
-    if (_stat.is_exist)
+    if (_statisics.is_exist)
     {
-        if (!_stat.buses_.empty())
+        if (!_statisics.buses_.empty())
         {
             _output << double_offset << R"("buses": [)" << std::endl;
             size_t current_index = 0;
-            for (auto bus : _stat.buses_)
+            for (auto bus : _statisics.buses_)
             {
                 ++current_index;
                 _output << double_offset << ' ' << R"(")" << bus << R"(")";
-                if (current_index < _stat.buses_.size())
+                if (current_index < _statisics.buses_.size())
                 {
                     _output << ", "s;
                 }
@@ -164,20 +171,20 @@ void writeStopStat(const domain::StopStat &_stat, uint32_t _id, std::ostream &_o
     _output << offset << "}";
 }
 
-void writeBusStat(const domain::BusStat &_stat, uint32_t _id, std::ostream &_output)
+void JsonReader::writeBusStat(const domain::BusStat &_statisics, uint32_t _id, std::ostream &_output)
 {
     using namespace std::literals::string_literals;
     _output << std::setprecision(6);
 
     _output << offset << "{" << std::endl;
 
-    if (_stat.number_stops_ != 0)
+    if (_statisics.number_stops_ != 0)
     {
-        _output << double_offset << R"("curvature": )" << _stat.curvature_ << R"(,)" << std::endl <<
+        _output << double_offset << R"("curvature": )" << _statisics.curvature_ << R"(,)" << std::endl <<
                    double_offset << R"("request_id": )" << _id << R"(,)" << std::endl <<
-                   double_offset << R"("route_length": )" << _stat.route_length_ << R"(,)" << std::endl <<
-                   double_offset << R"("stop_count": )" << _stat.number_stops_ << R"(,)" << std::endl <<
-                   double_offset << R"("unique_stop_count": )" << _stat.number_unique_stops_ << std::endl;
+                   double_offset << R"("route_length": )" << _statisics.route_length_ << R"(,)" << std::endl <<
+                   double_offset << R"("stop_count": )" << _statisics.number_stops_ << R"(,)" << std::endl <<
+                   double_offset << R"("unique_stop_count": )" << _statisics.number_unique_stops_ << std::endl;
     }
     else
     {
@@ -220,7 +227,7 @@ svg::Color parseColor(const json::Node& node)
     throw std::invalid_argument("Can't read color from JSON");
 }
 
-void parseRenderSettings(const json::Document &_doc, renderer::MapRenderer &render)
+void JsonReader::parseRenderSettings(const json::Document &_doc)
 {
     if (!_doc.GetRoot().IsMap())
     {
@@ -229,34 +236,34 @@ void parseRenderSettings(const json::Document &_doc, renderer::MapRenderer &rend
 
     if (_doc.GetRoot().AsMap().count("render_settings") == 0U)
     {
-        render.setInitSetting(false);
+        render_.setInitSetting(false);
         return;
         throw std::invalid_argument("Incorrect JSON");
     }
 
     const auto& settings = _doc.GetRoot().AsMap().at("render_settings").AsMap();
 
-    render.setWidth(settings.at("width").AsDouble());
-    render.setHeight(settings.at("height").AsDouble());
-    render.setPadding(settings.at("padding").AsDouble());
-    render.setLineWidth(settings.at("line_width").AsDouble());
-    render.setStopRadius(settings.at("stop_radius").AsDouble());
-    render.setBusLabelFontSize(settings.at("bus_label_font_size").AsInt());
-    render.setBusLabelOffset(settings.at("bus_label_offset").AsArray().front().AsDouble(),
+    render_.setWidth(settings.at("width").AsDouble());
+    render_.setHeight(settings.at("height").AsDouble());
+    render_.setPadding(settings.at("padding").AsDouble());
+    render_.setLineWidth(settings.at("line_width").AsDouble());
+    render_.setStopRadius(settings.at("stop_radius").AsDouble());
+    render_.setBusLabelFontSize(settings.at("bus_label_font_size").AsInt());
+    render_.setBusLabelOffset(settings.at("bus_label_offset").AsArray().front().AsDouble(),
                              settings.at("bus_label_offset").AsArray().back().AsDouble());
-    render.setStopLabelFontSize(settings.at("stop_label_font_size").AsInt());
-    render.setStopLabelOffset(settings.at("stop_label_offset").AsArray().front().AsDouble(),
+    render_.setStopLabelFontSize(settings.at("stop_label_font_size").AsInt());
+    render_.setStopLabelOffset(settings.at("stop_label_offset").AsArray().front().AsDouble(),
                               settings.at("stop_label_offset").AsArray().back().AsDouble());
-    render.setUnderlayerColor(parseColor(settings.at("underlayer_color")));
-    render.setUnderlayerWidth(settings.at("underlayer_width").AsDouble());
+    render_.setUnderlayerColor(parseColor(settings.at("underlayer_color")));
+    render_.setUnderlayerWidth(settings.at("underlayer_width").AsDouble());
     for (const auto& color : settings.at("color_palette").AsArray())
     {
-        render.appendColorPalette(parseColor(color));
+        render_.appendColorPalette(parseColor(color));
     }
-    render.setInitSetting(true);
+    render_.setInitSetting(true);
 }
 
-void writeMap(const svg::Document &_doc, uint32_t _id, std::ostream &_output)
+void JsonReader::writeMap(const svg::Document &_doc, uint32_t _id, std::ostream &_output)
 {
     using namespace std::literals::string_literals;
     std::stringstream  doc_stream;

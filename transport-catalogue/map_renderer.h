@@ -1,5 +1,6 @@
 #ifndef MAPRENDERER_H
 #define MAPRENDERER_H
+#pragma once
 
 #include <algorithm>
 #include <cstdlib>
@@ -11,7 +12,7 @@
 #include "libs\geo.h"
 #include "libs\svg.h"
 
-#include "domain.h"
+#include "transport_catalogue.h"
 
 namespace renderer
 {
@@ -100,6 +101,8 @@ class MapRenderer
 public:
 
     MapRenderer() = default;
+    ~MapRenderer() = default;
+    MapRenderer(const MapRenderer& _other) = delete;
 
     void setWidth(double width);
     void setHeight(double height);
@@ -116,11 +119,12 @@ public:
     void setColorPalette(const std::vector<svg::Color> &colors);
     void setColorPalette(std::vector<svg::Color> &&colors) noexcept;
     void setInitSetting(bool value);
+    svg::Document render(const TransportCatalogue &_catalogue) const;
 
     [[nodiscard]] bool getInitSetting() const noexcept;
-    double getWidht() const noexcept;
-    double getHeight() const noexcept;
-    double getPadding() const noexcept;
+    [[nodiscard]] double getWidht() const noexcept;
+    [[nodiscard]] double getHeight() const noexcept;
+    [[nodiscard]] double getPadding() const noexcept;
 
     [[nodiscard]] svg::Polyline renderPolylineBusRoute(const std::deque<svg::Point> &stops_points,
                                                        size_t index_color) const;
@@ -154,6 +158,16 @@ private:
     svg::Color underlayer_color_;
     double underlayer_width_ = 0.0;
     std::vector<svg::Color> color_palette_;
+
+    void createRoutePolylines(svg::Document &_doc,
+                              const TransportCatalogue &_catalogue,
+                              const renderer::SphereProjector &_sp,
+                              const std::vector<const domain::Bus *> &_buses) const;
+
+    void createRouteTexts(svg::Document &_doc,
+                          const TransportCatalogue &_catalogue,
+                          const renderer::SphereProjector &_sp,
+                          const std::vector<const domain::Bus *> &_buses) const;
 };
 
 } //namespace renderer

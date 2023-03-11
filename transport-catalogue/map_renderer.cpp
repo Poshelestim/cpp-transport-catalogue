@@ -142,6 +142,130 @@ void MapRenderer::setInitSetting(bool value)
     is_init = value;
 }
 
+
+void MapRenderer::createRoutePolylines(svg::Document &_doc,
+                                       const TransportCatalogue &_catalogue,
+                                       const renderer::SphereProjector &_sp,
+                                       const std::vector<const domain::Bus *> &_buses) const
+{
+    size_t bus_count = 0;
+    for (const auto *bus_ptr : _buses)
+    {
+        std::deque<svg::Point> stops_points;
+
+        for (const auto &stop : bus_ptr->route_)
+        {
+            const auto *ptr = _catalogue.findStop(stop);
+            stops_points.push_back(_sp({ ptr->latitude_, ptr->longitude_ }));
+        }
+
+        if (!bus_ptr->is_circul_)
+        {
+            auto it = bus_ptr->route_.rbegin() + 1;
+
+            while (it != bus_ptr->route_.rend())
+            {
+                const auto *ptr = _catalogue.findStop(*it);
+                stops_points.push_back(_sp({ ptr->latitude_, ptr->longitude_ }));
+                ++it;
+            }
+        }
+
+        _doc.Add(renderPolylineBusRoute(stops_points, bus_count));
+        ++bus_count;
+    }
+}
+
+void MapRenderer::createRouteTexts(svg::Document &_doc,
+                                   const TransportCatalogue &_catalogue,
+                                   const renderer::SphereProjector &_sp,
+                                   const std::vector<const domain::Bus *> &_buses) const
+{
+    size_t bus_count = 0;
+    {
+        for (const auto *bus_ptr : _buses)
+        {
+            const auto *stop_begin = _catalogue.findStop(*bus_ptr->route_.begin());
+            _doc.Add(renderTextUnderlayerBusRoute(
+                         _sp({ stop_begin->latitude_, stop_begin->longitude_ }),
+                         bus_ptr->name_));
+            _doc.Add(renderTextBusRoute(_sp({ stop_begin->latitude_,
+                                              stop_begin->longitude_ }),
+                                        bus_ptr->name_, bus_count));
+            if (!bus_ptr->is_circul_)
+            {
+                const auto *stop_end = _catalogue.findStop(*(bus_ptr->route_.end() - 1));
+                if (stop_end->name_ != stop_begin->name_)
+                {
+                    _doc.Add(renderTextUnderlayerBusRoute(
+                                 _sp({ stop_end->latitude_, stop_end->longitude_ }),
+                                 bus_ptr->name_));
+                    _doc.Add(renderTextBusRoute(_sp({ stop_end->latitude_,
+                                                      stop_end->longitude_ }),
+                                                bus_ptr->name_, bus_count));
+                }
+            }
+            ++bus_count;
+        }
+    }
+}
+
+svg::Document MapRenderer::render(const TransportCatalogue &_catalogue) const
+{
+    svg::Document doc;
+    if (!this->is_init)
+    {
+        return doc;
+    }
+
+    std::deque<geo::Coordinates> geo_points;
+
+    const auto stops = _catalogue.getSortedUsedStops();
+
+    for (const auto *stop: stops)
+    {
+        geo_points.push_back({ stop->latitude_, stop->longitude_ });
+    }
+
+    const renderer::SphereProjector sp(geo_points.begin(),
+                                       geo_points.end(),
+                                       this->getWidht(),
+                                       this->getHeight(),
+                                       this->getPadding());
+
+    ///отрисовка маршрутов
+    {
+        const auto buses = _catalogue.getSortedBuses();
+        createRoutePolylines(doc, _catalogue, sp, buses);
+        createRouteTexts(doc, _catalogue, sp, buses);
+    }
+    ///отрисовка остановок
+    {
+        ///отрисовка кругов остановок
+        {
+            for (const auto *stop : stops)
+            {
+                doc.Add(renderCircleStop(sp({ stop->latitude_,
+                                              stop->longitude_ })));
+            }
+        }
+        ///отрисовка названий остановок
+        {
+            for (const auto *stop : stops)
+            {
+                doc.Add(renderTextUnderlayerStop(sp({ stop->latitude_,
+                                                      stop->longitude_ }),
+                                                 stop->name_));
+                doc.Add(renderTextStop(sp({ stop->latitude_,
+                                            stop->longitude_ }),
+                                       stop->name_));
+            }
+        }
+    }
+
+    return doc;
+}
+
 bool MapRenderer::getInitSetting() const noexcept
 {
     return is_init;

@@ -11,7 +11,7 @@ namespace domain
 {
 struct Bus;
 struct Stop;
-}
+} // namespace domain
 
 namespace reader
 {
@@ -32,20 +32,33 @@ struct TypeRequest
     std::string_view name;
 };
 
-json::Document readJson(std::istream &_input);
+class JsonReader
+{
+public:
+    JsonReader(TransportCatalogue &_catalogue, renderer::MapRenderer &map_renderer);
 
-void parseBaseRequests(const json::Document &_doc,
-                       TransportCatalogue &_catalogue);
+    ~JsonReader() = default;
 
-std::vector<TypeRequest> parseRequests(const json::Document &_doc);
+    JsonReader(const JsonReader& _other) = delete;
 
-void writeStopStat(const domain::StopStat &_stat, uint32_t _id, std::ostream &_output);
+    static json::Document readJson(std::istream &_input);
 
-void writeBusStat(const domain::BusStat &_stat, uint32_t _id, std::ostream &_output);
+    void parseBaseRequests(const json::Document &_doc);
 
-void parseRenderSettings(const json::Document &_doc, renderer::MapRenderer &render);
+    static std::vector<TypeRequest> parseRequests(const json::Document &_doc);
 
-void writeMap(const svg::Document &_doc, uint32_t _id, std::ostream &_output);
+    static void writeStopStat(const domain::StopStat &_statisics, uint32_t _id, std::ostream &_output);
+
+    static void writeBusStat(const domain::BusStat &_statisics, uint32_t _id, std::ostream &_output);
+
+    void parseRenderSettings(const json::Document &_doc);
+
+    static void writeMap(const svg::Document &_doc, uint32_t _id, std::ostream &_output);
+
+private:
+    TransportCatalogue &catalogue_;
+    renderer::MapRenderer &render_;
+};
 
 } //namespace reader
 

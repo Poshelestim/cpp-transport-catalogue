@@ -1,12 +1,12 @@
 #ifndef REQUESTHANDLER_H
 #define REQUESTHANDLER_H
+#pragma once
+
 #include <istream>
 #include <optional>
 #include <string>
 #include <vector>
 
-#include "transport_catalogue.h"
-#include "map_renderer.h"
 #include "json_reader.h"
 
 class RequestHandler

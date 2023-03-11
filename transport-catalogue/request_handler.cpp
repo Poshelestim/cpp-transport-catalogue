@@ -48,20 +48,20 @@ RequestHandler::BusStat RequestHandler::getBusInfo(std::string_view _name) const
 
 void RequestHandler::procRequests(const json::Document &_doc, std::ostream &_output) const
 {
-    const auto queries = reader::parseRequests(_doc);
+    const auto queries = reader::JsonReader::parseRequests(_doc);
     _output << R"([)" << std::endl;
     for (auto query = queries.begin(); query != queries.end(); ++query)
     {
         switch (query->type)
         {
         case reader::TypeRequest::STOP :
-            reader::writeStopStat(getStopInfo(query->name), query->id, _output);
+            reader::JsonReader::writeStopStat(getStopInfo(query->name), query->id, _output);
             break;
         case reader::TypeRequest::BUS :
-            reader::writeBusStat(getBusInfo(query->name), query->id, _output);
+            reader::JsonReader::writeBusStat(getBusInfo(query->name), query->id, _output);
             break;
         case reader::TypeRequest::MAP :
-            reader::writeMap(RenderMap(), query->id, _output);
+            reader::JsonReader::writeMap(RenderMap(), query->id, _output);
             break;
         default:
             break;
@@ -78,121 +78,6 @@ void RequestHandler::procRequests(const json::Document &_doc, std::ostream &_out
 
 svg::Document RequestHandler::RenderMap() const
 {
-    svg::Document doc;
-    if (!renderer_.getInitSetting())
-    {
-        return doc;
-    }
-
-    std::deque<geo::Coordinates> geo_points;
-
-    const auto stops = catalogue_.getSortedUsedStops();
-
-    for (const auto *stop: stops)
-    {
-        geo_points.push_back({ stop->latitude_, stop->longitude_ });
-    }
-
-    const renderer::SphereProjector sp(geo_points.begin(),
-                                       geo_points.end(),
-                                       renderer_.getWidht(),
-                                       renderer_.getHeight(),
-                                       renderer_.getPadding());
-
-    ///отрисовка маршрутов
-    {
-        const auto buses = catalogue_.getSortedBuses();
-        createRoutePolylines(doc, sp, buses);
-        createRouteTexts(doc, sp, buses);
-    }
-    ///отрисовка остановок
-    {
-        ///отрисовка кругов остановок
-        {
-            for (const auto *stop : stops)
-            {
-                doc.Add(renderer_.renderCircleStop(sp({ stop->latitude_,
-                                                        stop->longitude_ })));
-            }
-        }
-        ///отрисовка названий остановок
-        {
-            for (const auto *stop : stops)
-            {
-                doc.Add(renderer_.renderTextUnderlayerStop(sp({ stop->latitude_,
-                                                                stop->longitude_ }),
-                                                           stop->name_));
-                doc.Add(renderer_.renderTextStop(sp({ stop->latitude_,
-                                                      stop->longitude_ }),
-                                                 stop->name_));
-            }
-        }
-    }
-
-    return doc;
+    return renderer_.render(catalogue_);
 }
 
-void RequestHandler::createRoutePolylines(svg::Document &_doc,
-                                          const renderer::SphereProjector &_sp,
-                                          const std::vector<const domain::Bus *> &_buses) const
-{
-    size_t COUNTER_BUSES = 0;
-    for (const auto *bus_ptr : _buses)
-    {
-        std::deque<svg::Point> stops_points;
-
-        for (const auto &stop : bus_ptr->route_)
-        {
-            const auto *ptr = catalogue_.findStop(stop);
-            stops_points.push_back(_sp({ ptr->latitude_, ptr->longitude_ }));
-        }
-
-        if (!bus_ptr->is_circul_)
-        {
-            auto it = bus_ptr->route_.rbegin() + 1;
-
-            while (it != bus_ptr->route_.rend())
-            {
-                const auto *ptr = catalogue_.findStop(*it);
-                stops_points.push_back(_sp({ ptr->latitude_, ptr->longitude_ }));
-                ++it;
-            }
-        }
-
-        _doc.Add(renderer_.renderPolylineBusRoute(stops_points, COUNTER_BUSES));
-        ++COUNTER_BUSES;
-    }
-}
-
-void RequestHandler::createRouteTexts(svg::Document &_doc,
-                                      const renderer::SphereProjector &_sp,
-                                      const std::vector<const domain::Bus *> &_buses) const
-{
-    size_t COUNTER_BUSES = 0;
-    {
-        for (const auto *bus_ptr : _buses)
-        {
-            const auto *stop_begin = catalogue_.findStop(*bus_ptr->route_.begin());
-            _doc.Add(renderer_.renderTextUnderlayerBusRoute(
-                         _sp({ stop_begin->latitude_, stop_begin->longitude_ }),
-                         bus_ptr->name_));
-            _doc.Add(renderer_.renderTextBusRoute(_sp({ stop_begin->latitude_,
-                                                        stop_begin->longitude_ }),
-                                                  bus_ptr->name_, COUNTER_BUSES));
-            if (!bus_ptr->is_circul_)
-            {
-                const auto *stop_end = catalogue_.findStop(*(bus_ptr->route_.end() - 1));
-                if (stop_end->name_ != stop_begin->name_)
-                {
-                    _doc.Add(renderer_.renderTextUnderlayerBusRoute(
-                                 _sp({ stop_end->latitude_, stop_end->longitude_ }),
-                                 bus_ptr->name_));
-                    _doc.Add(renderer_.renderTextBusRoute(_sp({ stop_end->latitude_,
-                                                                stop_end->longitude_ }),
-                                                          bus_ptr->name_, COUNTER_BUSES));
-                }
-            }
-            ++COUNTER_BUSES;
-        }
-    }
-}
