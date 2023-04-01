@@ -35,7 +35,7 @@ public:
     bool IsPureDouble() const;
     bool IsString() const;
     bool IsArray() const;
-    bool IsMap() const;
+    bool IsDict() const;
 
     friend bool operator==(const Node& lhs, const Node& rhs)
     {
@@ -53,12 +53,24 @@ public:
     double AsDouble() const;
     const std::string &AsString() const;
     const Array &AsArray() const;
-    const Dict &AsMap() const;
+    const Dict &AsDict() const;
+};
+
+struct PrintContext
+{
+    std::ostream& out;
+    int indent_step = 4;
+    int indent = 0;
+
+    void PrintIndent() const;
+
+    [[nodiscard]] PrintContext Indented() const;
 };
 
 struct NodePrinter
 {
-    std::ostream& out;
+    std::ostream &out;
+    PrintContext &ctx;
 
     void operator()(std::nullptr_t) const;
     void operator()(bool value) const;
@@ -74,7 +86,7 @@ class Document
 public:
     explicit Document(Node root);
 
-    const Node& GetRoot() const;
+    [[nodiscard]] const Node& GetRoot() const;
 
     friend bool operator==(const Document& left, const Document& right)
     {

@@ -194,7 +194,7 @@ Node LoadNumber(std::istream& input)
 Node LoadDict(istream& input) {
     Dict result;
 
-    for (char c; input >> c && c != '}';)
+    for (char c = '\0'; input >> c && c != '}';)
     {
         if (c == ',') {
             input >> c;
@@ -238,7 +238,7 @@ Node LoadBool(istream& input)
 
 Node LoadNode(istream& input)
 {
-    char c;
+    char c = 0;
     input >> c;
 
     if (c == 'n')
@@ -308,7 +308,7 @@ bool Node::IsArray() const
     return std::holds_alternative<Array>(*this);
 }
 
-bool Node::IsMap() const
+bool Node::IsDict() const
 {
     return std::holds_alternative<Dict>(*this);
 }
@@ -340,6 +340,7 @@ int Node::AsInt() const
 
 double Node::AsDouble() const
 {
+    using namespace std::literals;
     if (IsInt())
     {
         return static_cast<double>(std::get<int>(*this));
@@ -350,7 +351,7 @@ double Node::AsDouble() const
         return std::get<double>(*this);
     }
 
-    throw std::logic_error("Not a double");
+    throw std::logic_error("Not a double"s);
 }
 
 const string& Node::AsString() const
@@ -373,14 +374,25 @@ const Array& Node::AsArray() const
     throw std::logic_error("Not an array");
 }
 
-const Dict& Node::AsMap() const
+const Dict& Node::AsDict() const
 {
-    if (IsMap())
+    if (IsDict())
     {
         return std::get<Dict>(*this);
     }
 
     throw std::logic_error("Not a map");
+}
+
+void PrintContext::PrintIndent() const
+{
+    const std::string str_indent(indent, ' ');
+    out << str_indent;
+}
+
+PrintContext PrintContext::Indented() const
+{
+    return {out, indent_step, indent_step + indent};
 }
 
 void NodePrinter::operator()(std::nullptr_t /*value*/) const
@@ -419,9 +431,6 @@ void NodePrinter::operator()(const std::string &str) const
         case '"':
             out << R"(\")";
             break;
-        case '\t':
-            out << "\t"sv;
-            break;
         case '\\':
             out << R"(\\)";
             break;
@@ -435,38 +444,47 @@ void NodePrinter::operator()(const std::string &str) const
 
 void NodePrinter::operator()(const Array &array) const
 {
-    out << '[';
+    out << '[' << std::endl;
 
     bool is_first = true;
-    for (const auto &value : array) {
+    auto inner_ctx = ctx.Indented();
+    for (const auto &value : array)
+    {
         if (!is_first)
         {
-            out << ", "s;
+            out << ","sv << std::endl;
         }
         is_first = false;
-
-        std::visit(NodePrinter{out}, value.GetValue());
+        inner_ctx.PrintIndent();
+        std::visit(NodePrinter{out, inner_ctx}, value.GetValue());
     }
 
+    out << std::endl;
+    ctx.PrintIndent();
     out << ']';
 }
 
 void NodePrinter::operator()(const Dict &map) const
 {
-    out << '{';
+    out << '{' << std::endl;
+
     bool is_first = true;
+    auto inner_ctx = ctx.Indented();
     for (const auto &[key, value] : map)
     {
         if (!is_first)
         {
-            out << ", "s;
+            out << ","sv << std::endl;
         }
         is_first = false;
 
-        std::visit(NodePrinter{out}, Node{key}.GetValue());
-        out << ':';
-        std::visit(NodePrinter{out}, value.GetValue());
+        inner_ctx.PrintIndent();
+        std::visit(NodePrinter{out, inner_ctx}, Node{key}.GetValue());
+        out << ": "sv;
+        std::visit(NodePrinter{out, inner_ctx}, value.GetValue());
     }
+    out << std::endl;
+    ctx.PrintIndent();
     out << '}';
 }
 
@@ -488,7 +506,8 @@ Document Load(istream& input)
 
 void Print(const Document& doc, ostream& output)
 {
-    std::visit(NodePrinter{output}, doc.GetRoot().GetValue());
+    PrintContext ctx{output};
+    std::visit(NodePrinter{output, ctx}, doc.GetRoot().GetValue());
 }
 
 }  // namespace json

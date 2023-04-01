@@ -47,13 +47,13 @@ public:
 
     static std::vector<TypeRequest> parseRequests(const json::Document &_doc);
 
-    static void writeStopStat(const domain::StopStat &_statisics, uint32_t _id, std::ostream &_output);
-
-    static void writeBusStat(const domain::BusStat &_statisics, uint32_t _id, std::ostream &_output);
-
     void parseRenderSettings(const json::Document &_doc);
 
-    static void writeMap(const svg::Document &_doc, uint32_t _id, std::ostream &_output);
+    static json::Node writeStopStat(const domain::StopStat &_statisics, uint32_t _id);
+
+    static json::Node writeBusStat(const domain::BusStat &_statisics, uint32_t _id);
+
+    static json::Node writeMap(const svg::Document &_doc, uint32_t _id);
 
 private:
     TransportCatalogue &catalogue_;

@@ -55,12 +55,12 @@ struct Rgba
 {
     Rgba() = default;
 
-    Rgba(uint8_t _red, uint8_t _green, uint8_t _blue, float _opacity);
+    Rgba(uint8_t _red, uint8_t _green, uint8_t _blue, double _opacity);
 
     uint8_t red = 0;
     uint8_t green = 0;
     uint8_t blue = 0;
-    float opacity = 1.0;
+    double opacity = 1.0;
 };
 
 using Color = std::variant<std::monostate, std::string, Rgb, Rgba>;
@@ -76,7 +76,7 @@ struct ColorPrinter
     void operator()(Rgba _color) const;
 };
 
-std::ostream &operator<<(std::ostream& out, const Color color);
+std::ostream &operator<<(std::ostream& out, const Color &color);
 
 /*
  * Вспомогательная структура, хранящая контекст для вывода SVG-документа с отступами.
@@ -84,11 +84,11 @@ std::ostream &operator<<(std::ostream& out, const Color color);
  */
 struct RenderContext
 {
-    RenderContext(std::ostream& out);
+    explicit RenderContext(std::ostream& out);
 
     RenderContext(std::ostream& out, int indent_step, int indent = 0);
 
-    RenderContext Indented() const;
+    [[nodiscard]] RenderContext Indented() const;
 
     void RenderIndent() const;
 

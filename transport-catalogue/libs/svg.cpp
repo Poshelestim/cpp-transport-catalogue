@@ -58,7 +58,7 @@ svg::Rgb::Rgb(uint8_t _red, uint8_t _green, uint8_t _blue) :
 
 }
 
-svg::Rgba::Rgba(uint8_t _red, uint8_t _green, uint8_t _blue, float _opacity) :
+svg::Rgba::Rgba(uint8_t _red, uint8_t _green, uint8_t _blue, double _opacity) :
     red(_red), green(_green), blue(_blue), opacity(_opacity)
 {
 
@@ -77,21 +77,21 @@ void ColorPrinter::operator()(const std::string &_color) const
 void ColorPrinter::operator()(Rgb _color) const
 {
     out << "rgb("sv <<
-           std::to_string(_color.red) << ","sv <<
-           std::to_string(_color.green) << ","sv <<
-           std::to_string(_color.blue) << ")"sv;
+           static_cast<uint16_t>(_color.red) << ","sv <<
+           static_cast<uint16_t>(_color.green) << ","sv <<
+           static_cast<uint16_t>(_color.blue) << ")"sv;
 }
 
 void ColorPrinter::operator()(Rgba _color) const
 {
     out << "rgba("sv <<
-           std::to_string(_color.red) << ","sv <<
-           std::to_string(_color.green) << ","sv <<
-           std::to_string(_color.blue) << ","sv <<
-           _color.opacity << ")"sv;
+                std::to_string(_color.red) << ","sv <<
+                std::to_string(_color.green) << ","sv <<
+                std::to_string(_color.blue) << ","sv <<
+                _color.opacity << ")"sv;
 }
 
-std::ostream &operator<<(std::ostream &out, const Color color)
+std::ostream &operator<<(std::ostream &out, const Color &color)
 {
     std::visit(ColorPrinter{out}, color);
     return out;

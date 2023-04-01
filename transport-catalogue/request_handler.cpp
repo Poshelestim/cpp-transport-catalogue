@@ -1,10 +1,13 @@
 #include "request_handler.h"
 
+#include "json_builder.h"
+
 #include <iomanip>
 #include <iostream>
 #include <utility>
 
-RequestHandler::RequestHandler(const TransportCatalogue &db, const renderer::MapRenderer& renderer) :
+RequestHandler::RequestHandler(const TransportCatalogue &db,
+                               const renderer::MapRenderer& renderer) :
     catalogue_(db),
     renderer_(renderer)
 {
@@ -49,31 +52,30 @@ RequestHandler::BusStat RequestHandler::getBusInfo(std::string_view _name) const
 void RequestHandler::procRequests(const json::Document &_doc, std::ostream &_output) const
 {
     const auto queries = reader::JsonReader::parseRequests(_doc);
-    _output << R"([)" << std::endl;
-    for (auto query = queries.begin(); query != queries.end(); ++query)
+
+    json::Builder builder;
+    auto array = builder.StartArray();
+    for (const auto &query : queries)
     {
-        switch (query->type)
+        switch (query.type)
         {
         case reader::TypeRequest::STOP :
-            reader::JsonReader::writeStopStat(getStopInfo(query->name), query->id, _output);
+            array.Value(reader::JsonReader::writeStopStat(getStopInfo(query.name), query.id));
             break;
         case reader::TypeRequest::BUS :
-            reader::JsonReader::writeBusStat(getBusInfo(query->name), query->id, _output);
+            array.Value(reader::JsonReader::writeBusStat(getBusInfo(query.name), query.id));
             break;
         case reader::TypeRequest::MAP :
-            reader::JsonReader::writeMap(RenderMap(), query->id, _output);
+            array.Value(reader::JsonReader::writeMap(RenderMap(), query.id));
             break;
         default:
             break;
         }
-
-        if (query != queries.end() - 1)
-        {
-            _output << ',' << std::endl;
-        }
     }
-    _output << std::endl << R"(])" << std::endl;
 
+    array.EndArray();
+
+    json::Print(json::Document{builder.Build()}, _output);
 }
 
 svg::Document RequestHandler::RenderMap() const
