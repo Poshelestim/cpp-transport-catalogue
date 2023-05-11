@@ -11,9 +11,11 @@ namespace reader
 {
 
 JsonReader::JsonReader(TransportCatalogue &_catalogue,
-                       renderer::MapRenderer &map_renderer) :
+                       renderer::MapRenderer &_map_renderer,
+                       TransportRouter &_router) :
     catalogue_(_catalogue),
-    render_(map_renderer)
+    render_(_map_renderer),
+    router_(_router)
 {
 
 }
@@ -85,7 +87,7 @@ void JsonReader::parseBaseRequests(const json::Document &_doc)
     }
 }
 
-std::vector<TypeRequest> JsonReader::parseRequests(const json::Document &_doc)
+std::vector<TypeRequest> JsonReader::parseStatRequests(const json::Document &_doc)
 {
     if (!_doc.GetRoot().IsDict())
     {
@@ -103,7 +105,8 @@ std::vector<TypeRequest> JsonReader::parseRequests(const json::Document &_doc)
         {
             queries.emplace_back(TypeRequest{static_cast<uint32_t>(query.AsDict().at("id").AsInt()),
                                              TypeRequest::STOP,
-                                             query.AsDict().at("name").AsString()});
+                                             query.AsDict().at("name").AsString(),
+                                             "",""});
             continue;
         }
 
@@ -111,7 +114,8 @@ std::vector<TypeRequest> JsonReader::parseRequests(const json::Document &_doc)
         {
             queries.emplace_back(TypeRequest{static_cast<uint32_t>(query.AsDict().at("id").AsInt()),
                                              TypeRequest::BUS,
-                                             query.AsDict().at("name").AsString()});
+                                             query.AsDict().at("name").AsString(),
+                                             "",""});
             continue;
         }
 
@@ -119,7 +123,18 @@ std::vector<TypeRequest> JsonReader::parseRequests(const json::Document &_doc)
         {
             queries.emplace_back(TypeRequest{static_cast<uint32_t>(query.AsDict().at("id").AsInt()),
                                              TypeRequest::MAP,
-                                             ""});
+                                             "","",""});
+            continue;
+        }
+
+        if (query.AsDict().at("type").AsString() == "Route")
+        {
+            queries.emplace_back(TypeRequest{static_cast<uint32_t>(query.AsDict().at("id").AsInt()),
+                                             TypeRequest::ROUTE,
+                                             "",
+                                             query.AsDict().at("from").AsString(),
+                                             query.AsDict().at("to").AsString(),
+                                 });
             continue;
         }
     }
@@ -194,6 +209,28 @@ void JsonReader::parseRenderSettings(const json::Document &_doc)
     render_.setInitSetting(true);
 }
 
+void JsonReader::parseRoutingSettings(const json::Document &_doc)
+{
+    if (!_doc.GetRoot().IsDict())
+    {
+        throw std::invalid_argument("Incorrect JSON");
+    }
+
+    if (_doc.GetRoot().AsDict().count("routing_settings") == 0U)
+    {
+        router_.setInitSetting(false);
+        return;
+        throw std::invalid_argument("Incorrect JSON");
+    }
+
+    const auto& settings = _doc.GetRoot().AsDict().at("routing_settings").AsDict();
+
+    router_.setWaitTime(settings.at("bus_wait_time").AsInt())
+            .setVelocity(settings.at("bus_velocity").AsInt());
+
+    router_.setInitSetting(true);
+}
+
 json::Node JsonReader::writeStopStat(const domain::StopStat &_statisics, uint32_t _id)
 {
     using namespace std::literals::string_literals;
@@ -201,7 +238,7 @@ json::Node JsonReader::writeStopStat(const domain::StopStat &_statisics, uint32_
 
     auto dist = builder.StartDict();
 
-    if (_statisics.is_exist)
+    if (_statisics.is_exist_)
     {
         auto array = dist.Key("buses"s).StartArray();
 
@@ -264,38 +301,61 @@ json::Node JsonReader::writeMap(const svg::Document &_doc, uint32_t _id)
 
     std::string formed_text = doc_stream.str();
 
-//    char symbol = '\0';
-//    while (doc_stream.get(symbol))
-//    {
-//        if (symbol == '\n')
-//        {
-//            formed_text += R"(\n)";
-//        }
-//        else if (symbol == '\r')
-//        {
-//            formed_text += R"(\r)";
-//        }
-//        else if (symbol == '\t')
-//        {
-//            formed_text += R"(\t)";
-//        }
-//        else if (symbol == '\\')
-//        {
-//            formed_text += R"(\\)";
-//        }
-//        else if (symbol == '"')
-//        {
-//            formed_text += R"(\")";
-//        }
-//        else
-//        {
-//            formed_text += symbol;
-//        }
-//    }
-
     key.Value(formed_text);
 
     dist.Key("request_id"s).Value(static_cast<int>(_id));
+
+    dist.EndDict();
+
+    return builder.Build();
+}
+
+json::Node JsonReader::writeRoute(const RouteStat &_statisics, uint32_t _id)
+{
+    using namespace std::literals::string_literals;
+
+    json::Builder builder;
+
+    auto dist = builder.StartDict();
+
+    if (_statisics.has_value())
+    {
+        builder.Key("request_id"s).Value(static_cast<int>(_id)).
+                Key("total_time"s).Value(_statisics->first).
+                Key("items"s).StartArray();
+
+        for (const auto& route_item : _statisics->second)
+        {
+            if (const auto *wait_info =
+                    std::get_if<domain::WaitInfo>(&route_item))
+            {
+                builder.StartDict().
+                        Key("type"s).Value("Wait"s).
+                        Key("stop_name"s).Value(wait_info->name.data()).
+                        Key("time").Value(wait_info->time).
+                        EndDict();
+                continue;
+            }
+
+            if (const auto *route_info =
+                    std::get_if<domain::BusRouteInfo>(&route_item))
+            {
+                builder.StartDict().
+                        Key("type"s).Value("Bus"s).
+                        Key("bus"s).Value(route_info->name.data()).
+                        Key("span_count"s).Value(route_info->span_count).
+                        Key("time"s).Value(route_info->time).
+                        EndDict();
+                continue;
+            }
+        }
+        builder.EndArray();
+    }
+    else
+    {
+        dist.Key("request_id"s).Value(static_cast<int>(_id)).
+                Key("error_message"s).Value("not found"s);
+    }
 
     dist.EndDict();
 

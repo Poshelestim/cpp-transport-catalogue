@@ -8,8 +8,8 @@
 
 size_t TransportCatalogue::Hasher::operator()(const Stop *_stop) const
 {
-    const size_t number = 17;
-    size_t result =
+    static const size_t number = 17;
+    const size_t result =
             static_cast<size_t>(_stop->latitude_ * number) +
             static_cast<size_t>(_stop->longitude_ * std::pow(number, 2))
             + std::hash<std::string_view>{}(_stop->name_);
@@ -32,7 +32,7 @@ size_t TransportCatalogue::Hasher::operator()(const Bus *_key) const
 size_t TransportCatalogue::Hasher::operator()(std::pair<Stop *, Stop *> _key) const
 {
     const size_t number = 37;
-    size_t result = _key.first->latitude_ * std::pow(number, 1) +
+    const size_t result = _key.first->latitude_ * std::pow(number, 1) +
             _key.first->longitude_ * std::pow(number, 2) +
             _key.second->latitude_ * std::pow(number, 3) +
             _key.second->longitude_ * std::pow(number, 4) +
@@ -42,18 +42,15 @@ size_t TransportCatalogue::Hasher::operator()(std::pair<Stop *, Stop *> _key) co
     return result;
 }
 
-size_t TransportCatalogue::Hasher::operator()(const std::pair<std::string_view, std::string_view> &_key) const
-{
-    return std::hash<std::string_view>{}(_key.first) +
-    std::hash<std::string_view>{}(_key.second);
-}
-
 void TransportCatalogue::addStop(Stop &&_new_stop,
                                  const std::vector<std::pair<std::string_view, double> > &_distances_to_stops) noexcept
 {
+    static size_t id_counter = 0;
+
     stops_.emplace_back(std::move(_new_stop));
     Stop *ptr_stop = &stops_[stops_.size() - 1];
     stopname_to_stops_[ptr_stop->name_] = ptr_stop;
+    ptr_stop->id_ = id_counter++;
     stop_to_buses_.insert({ptr_stop->name_, std::set<std::string_view>{}});
 
     if (!_distances_to_stops.empty())
@@ -70,6 +67,15 @@ TransportCatalogue::Stop *TransportCatalogue::findStop(std::string_view _name) c
     if (stopname_to_stops_.find(_name) != stopname_to_stops_.end())
     {
         return stopname_to_stops_.at(_name);
+    }
+    return nullptr;
+}
+
+const TransportCatalogue::Stop *TransportCatalogue::findStopById(size_t _id) const
+{
+    if (_id < stops_.size())
+    {
+        return &stops_.at(_id);
     }
     return nullptr;
 }
@@ -146,7 +152,8 @@ TransportCatalogue::Bus *TransportCatalogue::findBus(std::string_view _name) con
     return nullptr;
 }
 
-const std::set<std::string_view> &TransportCatalogue::getNameBuses(std::string_view _name) const
+const std::set<std::string_view> &
+TransportCatalogue::getNameBuses(std::string_view _name) const
 {
     return stop_to_buses_.at(_name);
 }
@@ -160,7 +167,10 @@ auto TransportCatalogue::getSortedBuses() const -> std::vector<const Bus *>
         result.push_back(&bus);
     }
     std::sort(result.begin(), result.end(),
-              [](const Bus *_lhs, const Bus *_rhs){return _lhs->name_ < _rhs->name_;});
+              [](const Bus *_lhs, const Bus *_rhs)
+    {
+        return _lhs->name_ < _rhs->name_;
+    });
     return result;
 }
 
@@ -176,6 +186,25 @@ std::vector<const TransportCatalogue::Stop *> TransportCatalogue::getSortedUsedS
         }
     }
     std::sort(result.begin(), result.end(),
-              [](const Stop *_lhs, const Stop *_rhs){return _lhs->name_ < _rhs->name_;});
+              [](const Stop *_lhs, const Stop *_rhs)
+    {
+        return _lhs->name_ < _rhs->name_;
+    });
     return result;
+}
+
+size_t TransportCatalogue::getCountStops() const
+{
+    return stops_.size();
+}
+
+std::optional<double>
+TransportCatalogue::getDistancesBetweenStops(const std::pair<std::string_view, std::string_view> &_key) const
+{
+    if (distances_between_stops_.count(_key) != 0U)
+    {
+        return distances_between_stops_.at(_key);
+    }
+
+    return std::nullopt;
 }

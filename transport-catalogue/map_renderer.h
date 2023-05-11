@@ -145,7 +145,7 @@ public:
 
 private:
 
-    bool is_init = false;
+    bool is_init_ = false;
     double width_ = 0.0;
     double height_ = 0.0;
     double padding_ = 0.0;

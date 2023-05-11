@@ -2,6 +2,7 @@
 #include <cmath>
 
 #include <deque>
+#include <optional>
 #include <unordered_set>
 #include <unordered_map>
 
@@ -17,9 +18,13 @@ public:
 
     struct Hasher
     {
-        size_t operator()(const std::pair<std::string_view, std::string_view> &_key) const;
-
         size_t operator()(std::pair<Stop *, Stop *> _key) const;
+
+        template <class T1, class T2>
+        std::size_t operator()(const std::pair<T1, T2> &_key) const
+        {
+            return std::hash<T1>()(_key.first) + 37 * std::hash<T2>()(_key.second);
+        }
 
         size_t operator()(const Stop *_key) const;
 
@@ -38,6 +43,8 @@ public:
 
     Stop *findStop(std::string_view _name) const;
 
+    const Stop *findStopById(size_t _id) const;
+
     void addBus(Bus &&_new_bus) noexcept;
 
     Bus *findBus(std::string_view _name) const;
@@ -48,6 +55,10 @@ public:
 
     std::vector<const Stop *> getSortedUsedStops() const;
 
+    size_t getCountStops() const;
+
+    std::optional<double>
+    getDistancesBetweenStops(const std::pair<std::string_view, std::string_view> &_key) const;
 private:
 
     std::deque<Stop> stops_;

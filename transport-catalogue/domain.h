@@ -1,7 +1,6 @@
 #ifndef DOMAIN_H
 #define DOMAIN_H
 
-#include <memory>
 #include <string>
 #include <set>
 #include <vector>
@@ -27,6 +26,7 @@ struct Stop
 
     bool operator==(const Stop &other) const;
 
+    std::size_t id_;
     std::string_view name_;
     double latitude_;
     double longitude_;
@@ -59,7 +59,7 @@ struct BusStat
 {
     BusStat() = default;
 
-    std::string_view name_ = "";
+    std::string_view name_;
     size_t number_stops_ = 0;
     size_t number_unique_stops_ = 0;
     double route_length_ = 0.0;
@@ -71,10 +71,23 @@ struct StopStat
 {
     StopStat() = default;
 
-    std::string_view name_ = "";
+    std::string_view name_;
     std::set<std::string_view> buses_;
-    bool is_exist = false;
+    bool is_exist_ = false;
 };
 
-}
+struct BusRouteInfo
+{
+    std::string_view name;
+    int span_count = 0;
+    double time = 0.0;
+};
+
+struct WaitInfo
+{
+    std::string_view name;
+    double time = 0.0;
+};
+
+} // namespace domain
 #endif // DOMAIN_H

@@ -139,7 +139,7 @@ void MapRenderer::setColorPalette(std::vector<svg::Color> &&colors) noexcept
 
 void MapRenderer::setInitSetting(bool value)
 {
-    is_init = value;
+    is_init_ = value;
 }
 
 
@@ -213,7 +213,7 @@ void MapRenderer::createRouteTexts(svg::Document &_doc,
 svg::Document MapRenderer::render(const TransportCatalogue &_catalogue) const
 {
     svg::Document doc;
-    if (!this->is_init)
+    if (!this->is_init_)
     {
         return doc;
     }
@@ -268,7 +268,7 @@ svg::Document MapRenderer::render(const TransportCatalogue &_catalogue) const
 
 bool MapRenderer::getInitSetting() const noexcept
 {
-    return is_init;
+    return is_init_;
 }
 
 double MapRenderer::getWidht() const noexcept

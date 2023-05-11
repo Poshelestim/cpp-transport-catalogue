@@ -45,8 +45,9 @@ bool Bus::operator==(const Bus &other) const
 }
 
 Stop::Stop(std::string_view _name,
-                               std::string_view _latitude,
-                               std::string_view _longitude) :
+           std::string_view _latitude,
+           std::string_view _longitude) :
+    id_(0),
     name_(_name),
     latitude_(std::stod({_latitude.data(), _latitude.size()})),
     longitude_(std::stod({_longitude.data(), _longitude.size()}))

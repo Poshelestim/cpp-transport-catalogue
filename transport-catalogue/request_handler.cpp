@@ -7,9 +7,11 @@
 #include <utility>
 
 RequestHandler::RequestHandler(const TransportCatalogue &db,
-                               const renderer::MapRenderer& renderer) :
+                               const renderer::MapRenderer& renderer,
+                               const TransportRouter &router) :
     catalogue_(db),
-    renderer_(renderer)
+    renderer_(renderer),
+    router_(router)
 {
 
 }
@@ -27,7 +29,7 @@ RequestHandler::StopStat RequestHandler::getStopInfo(std::string_view _name) con
     if (ptr_stop != nullptr)
     {
         stopInfo.buses_ = catalogue_.getNameBuses(_name);
-        stopInfo.is_exist = true;
+        stopInfo.is_exist_ = true;
     }
     return stopInfo;
 }
@@ -48,10 +50,32 @@ RequestHandler::BusStat RequestHandler::getBusInfo(std::string_view _name) const
     }
     return busInfo;
 }
+RequestHandler::RouteStat RequestHandler::getRouteInfo(std::string_view _from, std::string_view _to) const
+{
+    const domain::Stop *stop_from = catalogue_.findStop(_from);
+    const domain::Stop *next_to = catalogue_.findStop(_to);
+
+    if (stop_from == nullptr || next_to == nullptr)
+    {
+        throw std::domain_error("createGraph(): findStop returned nullptr");
+    }
+
+    std::optional<std::pair<double, std::vector<TransportRouter::RouteItem>>> route =
+            router_.buildRoute(stop_from->name_, next_to->name_);
+
+    if (!route.has_value())
+    {
+        return std::nullopt;
+    }
+
+    return route;
+}
 
 void RequestHandler::procRequests(const json::Document &_doc, std::ostream &_output) const
 {
-    const auto queries = reader::JsonReader::parseRequests(_doc);
+    using namespace reader;
+
+    const auto queries = JsonReader::parseStatRequests(_doc);
 
     json::Builder builder;
     auto array = builder.StartArray();
@@ -59,14 +83,17 @@ void RequestHandler::procRequests(const json::Document &_doc, std::ostream &_out
     {
         switch (query.type)
         {
-        case reader::TypeRequest::STOP :
-            array.Value(reader::JsonReader::writeStopStat(getStopInfo(query.name), query.id));
+        case TypeRequest::STOP :
+            array.Value(JsonReader::writeStopStat(getStopInfo(query.name), query.id));
             break;
-        case reader::TypeRequest::BUS :
-            array.Value(reader::JsonReader::writeBusStat(getBusInfo(query.name), query.id));
+        case TypeRequest::BUS :
+            array.Value(JsonReader::writeBusStat(getBusInfo(query.name), query.id));
             break;
-        case reader::TypeRequest::MAP :
-            array.Value(reader::JsonReader::writeMap(RenderMap(), query.id));
+        case TypeRequest::MAP :
+            array.Value(JsonReader::writeMap(RenderMap(), query.id));
+            break;
+        case TypeRequest::ROUTE :
+            array.Value(JsonReader::writeRoute(getRouteInfo(query.from, query.to), query.id));
             break;
         default:
             break;
@@ -82,4 +109,3 @@ svg::Document RequestHandler::RenderMap() const
 {
     return renderer_.render(catalogue_);
 }
-

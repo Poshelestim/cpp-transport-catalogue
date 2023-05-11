@@ -11,11 +11,18 @@ int main()
 
     TransportCatalogue catalogue;
     renderer::MapRenderer render;
-    RequestHandler handler{catalogue, render};
-    reader::JsonReader reader(catalogue, render);
-    json::Document json_input = json::Load(std::cin);
+    TransportRouter router;
+
+    RequestHandler handler{catalogue, render, router};
+    reader::JsonReader reader(catalogue, render, router);
+
+    json::Document json_input = json::Load(cin);
     reader.parseBaseRequests(json_input);
     reader.parseRenderSettings(json_input);
-    handler.procRequests(json_input, std::cout);
+    reader.parseRoutingSettings(json_input);
+
+    router.createGraph(catalogue);
+
+    handler.procRequests(json_input, cout);
     return 0;
 }

@@ -3,7 +3,6 @@
 #pragma once
 
 #include <istream>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -15,20 +14,20 @@ public:
 
     using BusStat = domain::BusStat;
     using StopStat = domain::StopStat;
+    using RouteStat = std::optional<std::pair<double, std::vector<TransportRouter::RouteItem>>>;
 
-    // MapRenderer понадобится в следующей части итогового проекта
-    RequestHandler(const TransportCatalogue& db, const renderer::MapRenderer& renderer);
+    RequestHandler(const TransportCatalogue& db,
+                   const renderer::MapRenderer& renderer,
+                   const TransportRouter& router);
 
     // Возвращает информацию о маршруте (запрос Bus)
     [[nodiscard]] std::optional<BusStat> GetBusStat(std::string_view bus_name) const;
 
-
-    // Возвращает маршруты, проходящие через
-    //    const std::set<StopStat>* GetBusesByStop(const std::string_view& stop_name);
-
     [[nodiscard]] StopStat getStopInfo(std::string_view _name) const;
 
     [[nodiscard]] BusStat getBusInfo(std::string_view _name) const;
+
+    [[nodiscard]] RouteStat getRouteInfo(std::string_view _from, std::string_view _to) const;
 
     void procRequests(const json::Document &_doc, std::ostream &_output) const;
 
@@ -38,6 +37,7 @@ private:
     // RequestHandler использует агрегацию объектов "Транспортный Справочник" и "Визуализатор Карты"
     const TransportCatalogue& catalogue_;
     const renderer::MapRenderer& renderer_;
+    const TransportRouter& router_;
 
     svg::Polyline AddRoute(const domain::Bus *bus);
 

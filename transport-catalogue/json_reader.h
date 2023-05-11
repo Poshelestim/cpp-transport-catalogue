@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "transport_catalogue.h"
+#include "transport_router.h"
 #include "map_renderer.h"
 #include "libs/json.h"
 
@@ -25,17 +26,25 @@ struct TypeRequest
         BUS = 0,
         STOP,
         MAP,
+        ROUTE,
     };
 
     uint32_t id;
     TypeStatRequest type;
     std::string_view name;
+    std::string_view from;
+    std::string_view to;
 };
 
 class JsonReader
 {
 public:
-    JsonReader(TransportCatalogue &_catalogue, renderer::MapRenderer &map_renderer);
+
+    using RouteStat = std::optional<std::pair<double, std::vector<TransportRouter::RouteItem>>>;
+
+    JsonReader(TransportCatalogue &_catalogue,
+               renderer::MapRenderer &_map_renderer,
+               TransportRouter &_router);
 
     ~JsonReader() = default;
 
@@ -45,9 +54,11 @@ public:
 
     void parseBaseRequests(const json::Document &_doc);
 
-    static std::vector<TypeRequest> parseRequests(const json::Document &_doc);
+    static std::vector<TypeRequest> parseStatRequests(const json::Document &_doc);
 
     void parseRenderSettings(const json::Document &_doc);
+
+    void parseRoutingSettings(const json::Document &_doc);
 
     static json::Node writeStopStat(const domain::StopStat &_statisics, uint32_t _id);
 
@@ -55,9 +66,12 @@ public:
 
     static json::Node writeMap(const svg::Document &_doc, uint32_t _id);
 
+    static json::Node writeRoute(const RouteStat &_statisics, uint32_t _id);
+
 private:
     TransportCatalogue &catalogue_;
     renderer::MapRenderer &render_;
+    TransportRouter &router_;
 };
 
 } //namespace reader
