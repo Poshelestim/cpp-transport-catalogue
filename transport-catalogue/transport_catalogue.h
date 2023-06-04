@@ -14,6 +14,7 @@ class TransportCatalogue
     using Stop = domain::Stop;
     using CatalogueBuses = std::unordered_map<std::string_view, Bus *>;
     using StopToBuses = std::unordered_map<std::string_view, std::set<std::string_view>>;
+
 public:
 
     struct Hasher
@@ -59,6 +60,16 @@ public:
 
     std::optional<double>
     getDistancesBetweenStops(const std::pair<std::string_view, std::string_view> &_key) const;
+
+    const std::deque<Stop> &getAllStops() const;
+
+    const std::deque<Bus> &getAllBuses() const;
+
+    const std::unordered_map<std::pair<std::string_view, std::string_view>, double, Hasher>
+    &getAllDistances() const;
+
+    void appendDistancesBetweenStops(const std::pair<std::string_view, std::string_view> &stops,
+                                     double distance);
 private:
 
     std::deque<Stop> stops_;

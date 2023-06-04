@@ -100,6 +100,22 @@ class MapRenderer
 {
 public:
 
+    struct Settings
+    {
+        double width_ = 0.0;
+        double height_ = 0.0;
+        double padding_ = 0.0;
+        double line_width_ = 0.0;
+        double stop_radius_ = 0.0;
+        int bus_label_font_size_ = 0;
+        svg::Point bus_label_offset_ = {0.0, 0.0};
+        int stop_label_font_size_ = 0;
+        svg::Point stop_label_offset_ = {0.0, 0.0};
+        svg::Color underlayer_color_;
+        double underlayer_width_ = 0.0;
+        std::vector<svg::Color> color_palette_;
+    };
+
     MapRenderer() = default;
     ~MapRenderer() = default;
     MapRenderer(const MapRenderer& _other) = delete;
@@ -143,21 +159,11 @@ public:
     [[nodiscard]] svg::Text renderTextUnderlayerStop(svg::Point pos,
                                                      std::string_view text) const;
 
+    const Settings &getSettings() const;
 private:
 
     bool is_init_ = false;
-    double width_ = 0.0;
-    double height_ = 0.0;
-    double padding_ = 0.0;
-    double line_width_ = 0.0;
-    double stop_radius_ = 0.0;
-    int bus_label_font_size_ = 0;
-    svg::Point bus_label_offset_ = {0.0, 0.0};
-    int stop_label_font_size_ = 0;
-    svg::Point stop_label_offset_ = {0.0, 0.0};
-    svg::Color underlayer_color_;
-    double underlayer_width_ = 0.0;
-    std::vector<svg::Color> color_palette_;
+    Settings settings_;
 
     void createRoutePolylines(svg::Document &_doc,
                               const TransportCatalogue &_catalogue,

@@ -31,6 +31,30 @@ public:
     std::optional<std::pair<double, std::vector<RouteItem>>>
     buildRoute(std::string_view _from, std::string_view _to) const;
 
+    std::pair<double, double> getSettings() const;
+
+    graph::Router<double> *getInternalRouter();
+
+    const graph::Router<double> *getInternalRouter() const;
+
+    graph::DirectedWeightedGraph<double> &getGraph();
+
+    const graph::DirectedWeightedGraph<double> &getGraph() const;
+
+    std::unordered_map<std::string_view, VertexIds> &getVertexes();
+
+    const std::unordered_map<std::string_view, VertexIds> &getVertexes() const;
+
+    std::unordered_map<graph::EdgeId, domain::WaitInfo> &getWaitEdges();
+
+    const std::unordered_map<graph::EdgeId, domain::WaitInfo> &getWaitEdges() const;
+
+    std::unordered_map<graph::EdgeId, domain::BusRouteInfo> &getBusEdges();
+
+    const std::unordered_map<graph::EdgeId, domain::BusRouteInfo> &getBusEdges() const;
+
+    void setRouterWithNewGraph();
+
 private:
 
     bool is_init_ = false;

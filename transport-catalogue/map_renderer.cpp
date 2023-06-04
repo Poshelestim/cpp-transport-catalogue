@@ -14,7 +14,7 @@ void MapRenderer::setWidth(double width)
     {
         throw std::invalid_argument("invalid width value");
     }
-    width_ = width;
+    settings_.width_ = width;
 }
 
 void MapRenderer::setHeight(double height)
@@ -23,16 +23,17 @@ void MapRenderer::setHeight(double height)
     {
         throw std::invalid_argument("invalid height value");
     }
-    height_ = height;
+    settings_.height_ = height;
 }
 
 void MapRenderer::setPadding(double padding)
 {
-    if (padding < LEFT_VALUE_INTERVAL || padding > std::min(width_, height_) / 2.0)
+    if ( padding < LEFT_VALUE_INTERVAL ||
+         padding > std::min(settings_.width_, settings_.height_) / 2.0 )
     {
         throw std::invalid_argument("invalid padding value");
     }
-    padding_ = padding;
+    settings_.padding_ = padding;
 }
 
 void MapRenderer::setLineWidth(double line_width)
@@ -41,7 +42,7 @@ void MapRenderer::setLineWidth(double line_width)
     {
         throw std::invalid_argument("invalid line_width value");
     }
-    line_width_ = line_width;
+    settings_.line_width_ = line_width;
 }
 
 void MapRenderer::setStopRadius(double stop_radius)
@@ -50,7 +51,7 @@ void MapRenderer::setStopRadius(double stop_radius)
     {
         throw std::invalid_argument("invalid stop_radius value");
     }
-    stop_radius_ = stop_radius;
+    settings_.stop_radius_ = stop_radius;
 }
 
 void MapRenderer::setBusLabelFontSize(int bus_label_font_size)
@@ -59,7 +60,7 @@ void MapRenderer::setBusLabelFontSize(int bus_label_font_size)
     {
         throw std::invalid_argument("invalid bus_label_font_size value");
     }
-    bus_label_font_size_ = bus_label_font_size;
+    settings_.bus_label_font_size_ = bus_label_font_size;
 }
 
 void MapRenderer::setBusLabelOffset(double x, double y)
@@ -75,7 +76,7 @@ void MapRenderer::setBusLabelOffset(double x, double y)
         throw std::invalid_argument("invalid bus_label_offset_y value");
     }
 
-    bus_label_offset_ = {x, y};
+    settings_.bus_label_offset_ = {x, y};
 }
 
 void MapRenderer::setStopLabelFontSize(int stop_label_font_size)
@@ -84,7 +85,7 @@ void MapRenderer::setStopLabelFontSize(int stop_label_font_size)
     {
         throw std::invalid_argument("invalid stop_label_font_size value");
     }
-    stop_label_font_size_ = stop_label_font_size;
+    settings_.stop_label_font_size_ = stop_label_font_size;
 }
 
 void MapRenderer::setStopLabelOffset(double x, double y)
@@ -100,12 +101,12 @@ void MapRenderer::setStopLabelOffset(double x, double y)
         throw std::invalid_argument("invalid stop_label_offset_y value");
     }
 
-    stop_label_offset_ = {x, y};
+    settings_.stop_label_offset_ = {x, y};
 }
 
 void MapRenderer::setUnderlayerColor(const svg::Color &color)
 {
-    underlayer_color_ = color;
+    settings_.underlayer_color_ = color;
 }
 
 void MapRenderer::setUnderlayerWidth(double width)
@@ -114,12 +115,12 @@ void MapRenderer::setUnderlayerWidth(double width)
     {
         throw std::invalid_argument("invalid underlayer_width value");
     }
-    underlayer_width_ = width;
+    settings_.underlayer_width_ = width;
 }
 
 void MapRenderer::appendColorPalette(const svg::Color& color)
 {
-    color_palette_.emplace_back(color);
+    settings_.color_palette_.emplace_back(color);
 }
 
 void MapRenderer::setColorPalette(const std::vector<svg::Color> &colors)
@@ -128,12 +129,12 @@ void MapRenderer::setColorPalette(const std::vector<svg::Color> &colors)
     {
         throw std::invalid_argument("colors is empty");
     }
-    color_palette_ = colors;
+    settings_.color_palette_ = colors;
 }
 
 void MapRenderer::setColorPalette(std::vector<svg::Color> &&colors) noexcept
 {
-    std::swap(color_palette_, colors);
+    std::swap(settings_.color_palette_, colors);
     colors.clear();
 }
 
@@ -273,17 +274,17 @@ bool MapRenderer::getInitSetting() const noexcept
 
 double MapRenderer::getWidht() const noexcept
 {
-    return width_;
+    return settings_.width_;
 }
 
 double MapRenderer::getHeight() const noexcept
 {
-    return height_;
+    return settings_.height_;
 }
 
 double MapRenderer::getPadding() const noexcept
 {
-    return padding_;
+    return settings_.padding_;
 }
 
 svg::Polyline MapRenderer::renderPolylineBusRoute(const std::deque<svg::Point> &stops_points,
@@ -296,8 +297,8 @@ svg::Polyline MapRenderer::renderPolylineBusRoute(const std::deque<svg::Point> &
         result.AddPoint(stop);
     }
 
-    result.SetStrokeColor(color_palette_.at(index_color % color_palette_.size()))
-            .SetStrokeWidth(line_width_)
+    result.SetStrokeColor(settings_.color_palette_.at(index_color % settings_.color_palette_.size()))
+            .SetStrokeWidth(settings_.line_width_)
             .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
             .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND)
             .SetFillColor(svg::NoneColor);
@@ -314,9 +315,9 @@ svg::Text MapRenderer::renderTextBusRoute(svg::Point pos,
             .SetPosition(pos)
             .SetFontFamily("Verdana")
             .SetFontWeight("bold")
-            .SetOffset({bus_label_offset_})
-            .SetFillColor(color_palette_.at(index_color % color_palette_.size()))
-            .SetFontSize(static_cast<uint32_t>(bus_label_font_size_));
+            .SetOffset({settings_.bus_label_offset_})
+            .SetFillColor(settings_.color_palette_.at(index_color % settings_.color_palette_.size()))
+            .SetFontSize(static_cast<uint32_t>(settings_.bus_label_font_size_));
     return result;
 }
 
@@ -324,14 +325,14 @@ svg::Text MapRenderer::renderTextUnderlayerBusRoute(svg::Point pos,
                                                     std::string_view text) const
 {
     svg::Text underlayer;
-    underlayer.SetFillColor(underlayer_color_)
-            .SetStrokeColor(underlayer_color_)
-            .SetStrokeWidth(underlayer_width_)
+    underlayer.SetFillColor(settings_.underlayer_color_)
+            .SetStrokeColor(settings_.underlayer_color_)
+            .SetStrokeWidth(settings_.underlayer_width_)
             .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
             .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND)
             .SetPosition(pos)
-            .SetOffset(bus_label_offset_)
-            .SetFontSize(static_cast<uint32_t>(bus_label_font_size_))
+            .SetOffset(settings_.bus_label_offset_)
+            .SetFontSize(static_cast<uint32_t>(settings_.bus_label_font_size_))
             .SetFontFamily("Verdana")
             .SetFontWeight("bold")
             .SetData(text.data());
@@ -342,7 +343,7 @@ svg::Circle MapRenderer::renderCircleStop(svg::Point pos) const
 {
     svg::Circle circle;
     circle.SetCenter(pos)
-            .SetRadius(stop_radius_)
+            .SetRadius(settings_.stop_radius_)
             .SetFillColor("white");
     return circle;
 }
@@ -353,26 +354,31 @@ svg::Text MapRenderer::renderTextStop(svg::Point pos, std::string_view text) con
     result.SetData(text.data())
             .SetPosition(pos)
             .SetFontFamily("Verdana")
-            .SetOffset(stop_label_offset_)
+            .SetOffset(settings_.stop_label_offset_)
             .SetFillColor("black")
-            .SetFontSize(static_cast<uint32_t>(stop_label_font_size_));
+            .SetFontSize(static_cast<uint32_t>(settings_.stop_label_font_size_));
     return result;
 }
 
 svg::Text MapRenderer::renderTextUnderlayerStop(svg::Point pos, std::string_view text) const
 {
     svg::Text underlayer;
-    underlayer.SetFillColor(underlayer_color_)
-            .SetStrokeColor(underlayer_color_)
-            .SetStrokeWidth(underlayer_width_)
+    underlayer.SetFillColor(settings_.underlayer_color_)
+            .SetStrokeColor(settings_.underlayer_color_)
+            .SetStrokeWidth(settings_.underlayer_width_)
             .SetStrokeLineCap(svg::StrokeLineCap::ROUND)
             .SetStrokeLineJoin(svg::StrokeLineJoin::ROUND)
             .SetPosition(pos)
-            .SetOffset(stop_label_offset_)
-            .SetFontSize(static_cast<uint32_t>(stop_label_font_size_))
+            .SetOffset(settings_.stop_label_offset_)
+            .SetFontSize(static_cast<uint32_t>(settings_.stop_label_font_size_))
             .SetFontFamily("Verdana")
             .SetData(text.data());
     return underlayer;
+}
+
+const MapRenderer::Settings &MapRenderer::getSettings() const
+{
+    return this->settings_;
 }
 
 bool IsZero(double value)

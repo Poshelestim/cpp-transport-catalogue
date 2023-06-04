@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+import "graph.proto";
+
+package proto_transport_router;
+
+message RouteSettings {
+    int32 wait_time = 1;
+    double velocity = 2;
+}
+
+message VertexIds {
+    uint32 waiting = 1;
+    uint32 moving = 2;
+}
+
+message BusRouteInfo{ 
+    string name = 1;
+    int32 span_count = 2;
+    double time = 3;
+}
+
+message WaitInfo {
+    uint32 stop_id = 1;
+    double time = 2;
+}
+
+message TransportRouter {
+    RouteSettings settings = 1;
+	proto_graph.Graph graph = 2;
+    proto_graph.Router router = 3;
+	map<uint32, VertexIds> vertexes = 4;
+	map<uint32, WaitInfo> wait_edges = 5;
+	map<uint32, BusRouteInfo> bus_edges = 6;
+}

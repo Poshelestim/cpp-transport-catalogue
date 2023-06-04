@@ -60,6 +60,8 @@ public:
 
     void parseRoutingSettings(const json::Document &_doc);
 
+    std::optional<std::string> parseSerializationSettings(const json::Document &_doc);
+
     static json::Node writeStopStat(const domain::StopStat &_statisics, uint32_t _id);
 
     static json::Node writeBusStat(const domain::BusStat &_statisics, uint32_t _id);

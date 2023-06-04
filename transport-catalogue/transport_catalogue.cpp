@@ -208,3 +208,25 @@ TransportCatalogue::getDistancesBetweenStops(const std::pair<std::string_view, s
 
     return std::nullopt;
 }
+
+const std::deque<TransportCatalogue::Stop> &TransportCatalogue::getAllStops() const
+{
+    return this->stops_;
+}
+
+const std::deque<TransportCatalogue::Bus> &TransportCatalogue::getAllBuses() const
+{
+    return this->buses_;
+}
+
+const std::unordered_map<std::pair<std::string_view, std::string_view>, double, TransportCatalogue::Hasher>
+&TransportCatalogue::getAllDistances() const
+{
+    return this->distances_between_stops_;
+}
+
+void TransportCatalogue::appendDistancesBetweenStops(const std::pair<std::string_view, std::string_view> &stops,
+                                                     double distance)
+{
+    distances_between_stops_.insert_or_assign(stops, distance);
+}

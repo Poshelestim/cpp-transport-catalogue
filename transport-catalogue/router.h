@@ -20,7 +20,15 @@ private:
     using Graph = DirectedWeightedGraph<Weight>;
 
 public:
-    explicit Router(const Graph& graph);
+    explicit Router(const Graph& graph, bool do_initialize = true);
+
+    struct RouteInternalData
+    {
+        Weight weight;
+        std::optional<EdgeId> prev_edge;
+    };
+
+    using RoutesInternalData = std::vector<std::vector<std::optional<RouteInternalData>>>;
 
     struct RouteInfo {
         Weight weight;
@@ -29,12 +37,10 @@ public:
 
     std::optional<RouteInfo> BuildRoute(VertexId from, VertexId to) const;
 
+    RoutesInternalData &GetRoutesInternalData();
+    const RoutesInternalData &GetRoutesInternalData() const;
+
 private:
-    struct RouteInternalData {
-        Weight weight;
-        std::optional<EdgeId> prev_edge;
-    };
-    using RoutesInternalData = std::vector<std::vector<std::optional<RouteInternalData>>>;
 
     void InitializeRoutesInternalData(const Graph& graph) {
         const size_t vertex_count = graph.GetVertexCount();
@@ -81,12 +87,15 @@ private:
 };
 
 template <typename Weight>
-Router<Weight>::Router(const Graph& graph)
+Router<Weight>::Router(const Graph& graph, bool do_initialize)
     : graph_(graph)
     , routes_internal_data_(graph.GetVertexCount(),
                             std::vector<std::optional<RouteInternalData>>(graph.GetVertexCount()))
 {
-    InitializeRoutesInternalData(graph);
+    if (do_initialize)
+    {
+        InitializeRoutesInternalData(graph);
+    }
 
     const size_t vertex_count = graph.GetVertexCount();
     for (VertexId vertex_through = 0; vertex_through < vertex_count; ++vertex_through) {
@@ -112,6 +121,20 @@ std::optional<typename Router<Weight>::RouteInfo> Router<Weight>::BuildRoute(Ver
     std::reverse(edges.begin(), edges.end());
 
     return RouteInfo{weight, std::move(edges)};
+}
+
+template<typename Weight>
+typename Router<Weight>::RoutesInternalData &
+Router<Weight>::GetRoutesInternalData()
+{
+    return routes_internal_data_;
+}
+
+template<typename Weight>
+const typename Router<Weight>::RoutesInternalData &
+Router<Weight>::GetRoutesInternalData() const
+{
+    return routes_internal_data_;
 }
 
 }  // namespace graph

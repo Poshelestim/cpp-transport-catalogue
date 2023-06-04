@@ -110,3 +110,62 @@ TransportRouter::buildRoute(std::string_view _from, std::string_view _to) const
     return output;
 }
 
+std::pair<double, double> TransportRouter::getSettings() const
+{
+    return {wait_time_, velocity_};
+}
+
+graph::Router<double> *TransportRouter::getInternalRouter()
+{
+    return this->router_.get();
+}
+
+const graph::Router<double> *TransportRouter::getInternalRouter() const
+{
+    return this->router_.get();
+}
+
+graph::DirectedWeightedGraph<double> &TransportRouter::getGraph()
+{
+    return this->graph_;
+}
+
+const graph::DirectedWeightedGraph<double> &TransportRouter::getGraph() const
+{
+    return this->graph_;
+}
+
+std::unordered_map<std::string_view, TransportRouter::VertexIds> &TransportRouter::getVertexes()
+{
+    return this->vertexes_;
+}
+
+const std::unordered_map<std::string_view, TransportRouter::VertexIds> &TransportRouter::getVertexes() const
+{
+    return this->vertexes_;
+}
+
+std::unordered_map<graph::EdgeId, domain::WaitInfo> &TransportRouter::getWaitEdges()
+{
+    return this->wait_edges_;
+}
+
+const std::unordered_map<graph::EdgeId, domain::WaitInfo> &TransportRouter::getWaitEdges() const
+{
+    return this->wait_edges_;
+}
+
+std::unordered_map<graph::EdgeId, domain::BusRouteInfo> &TransportRouter::getBusEdges()
+{
+    return this->bus_edges_;
+}
+
+const std::unordered_map<graph::EdgeId, domain::BusRouteInfo> &TransportRouter::getBusEdges() const
+{
+    return this->bus_edges_;
+}
+
+void TransportRouter::setRouterWithNewGraph()
+{
+    router_ = std::make_unique<graph::Router<double>>(graph::Router<double>(this->graph_));
+}

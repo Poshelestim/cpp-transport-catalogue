@@ -231,6 +231,24 @@ void JsonReader::parseRoutingSettings(const json::Document &_doc)
     router_.setInitSetting(true);
 }
 
+std::optional<std::string> JsonReader::parseSerializationSettings(const json::Document &_doc)
+{
+    if (!_doc.GetRoot().IsDict())
+    {
+        throw std::invalid_argument("Incorrect JSON");
+    }
+
+    if (_doc.GetRoot().AsDict().count("serialization_settings") == 0U)
+    {
+        return {};
+        throw std::invalid_argument("Incorrect JSON");
+    }
+
+    const auto& settings = _doc.GetRoot().AsDict().at("serialization_settings").AsDict();
+
+    return {settings.at("file").AsString()};
+}
+
 json::Node JsonReader::writeStopStat(const domain::StopStat &_statisics, uint32_t _id)
 {
     using namespace std::literals::string_literals;
